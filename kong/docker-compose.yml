@@ -1,0 +1,123 @@
+version: "3.5"
+services:
+
+  postgres:
+    container_name: docker-postgres
+    image: postgres:9.6
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: "kong"
+      POSTGRES_PASSWORD: "password"
+      POSTGRES_USER: "postgres"
+      PGDATA: "/var/lib/postgresql/data"
+    volumes:
+      - "~/docker/data/:/var/lib/postgresql/data:rw"
+    restart: always
+
+  redis:
+    container_name: docker-redis
+    hostname: redis
+    image: redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  redis-commander:
+    container_name: redis-commander
+    hostname: redis-commander
+    image: rediscommander/redis-commander:latest
+    restart: always
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+
+  rabbitmq:
+    container_name: docker-rabbitmq
+    image: rabbitmq:3.8-management
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  kong:
+    container_name: docker-kong
+    image: kong:2.1.3
+    restart: always
+    ports:
+      - "8001:8001"
+      - "8444:8444"
+      - "8000:8000"
+      - "8443:8443"
+    depends_on:
+      - postgres
+    environment:
+      KONG_ADMIN_LISTEN: "0.0.0.0:8001"
+      KONG_PG_USER: postgres
+      KONG_PG_PASSWORD: password
+      KONG_PG_HOST: postgres
+      KONG_PG_DATABASE: kong
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_NGINX_HTTP_GZIP: "on"
+      KONG_NGINX_HTTP_GZIP_VARY: "on"
+      KONG_NGINX_HTTP_GZIP_TYPES: "text/plain text/css text/xml text/javascript application/x-javascript application/xml application/json"
+      KONG_NGINX_HTTP_GZIP_PROXIED: "any"
+
+  kong-migrations:
+    container_name: docker-kong-migrations
+    image: kong:2.1.3
+    command: kong migrations bootstrap
+    restart: on-failure
+    depends_on:
+      - postgres
+    environment:
+      KONG_PG_USER: postgres
+      KONG_PG_PASSWORD: password
+      KONG_PG_HOST: postgres
+      KONG_PG_DATABASE: kong
+
+  kong-migrations-up:
+    container_name: docker-kong-migrations-up
+    image: kong:2.1.3
+    command: kong migrations up && kong migrations finish
+    restart: on-failure
+    depends_on:
+      - postgres
+    environment:
+      KONG_PG_USER: postgres
+      KONG_PG_PASSWORD: password
+      KONG_PG_HOST: postgres
+      KONG_PG_DATABASE: kong
+
+  konga:
+    container_name: docker-konga
+    image: pantsel/konga:next
+    restart: always
+    # The following command manually runs db migrations
+    # command: "node ./bin/konga.js prepare --adapter postgres --uri postgresql://postgres:password@postgres:5432/konga && npm start"
+    environment:
+      DB_ADAPTER: postgres
+      DB_HOST: postgres
+      DB_USER: postgres
+      TOKEN_SECRET: km1GUr4RkcQD7DewhJPNXrCuZwcKmqjb
+      DB_DATABASE: konga
+      DB_PASSWORD: password
+      NODE_ENV: production
+      NODE_ENV: development
+      NO_AUTH: "true"
+    depends_on:
+      - postgres
+    ports:
+      - "1337:1337"
+  
+  # mock service for testing proxying requests
+  mock-service:
+    container_name: docker-mock
+    image: evansmwendwa/mock
+    restart: always
+    ports:
+      - "3001:3001"

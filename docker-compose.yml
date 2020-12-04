@@ -1,0 +1,66 @@
+version: "3.5"
+services:
+
+  postgres:
+    container_name: docker-postgres
+    image: postgres:9.6
+    ports:
+      - "5431:5432"
+    environment:
+      POSTGRES_DB: "kong"
+      POSTGRES_PASSWORD: "password"
+      POSTGRES_USER: "postgres"
+      PGDATA: "/var/lib/postgresql/data"
+    volumes:
+      - "~/docker/data/:/var/lib/postgresql/data:rw"
+    restart: always
+  
+  mysql:
+    container_name: docker-mysql
+    image: mysql:5.7
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: "db"
+      MYSQL_ROOT_PASSWORD: "password"
+    volumes:
+      - "~/docker/mysql/:/var/lib/mysql:rw"
+    restart: always
+
+  phpmyadmin:
+    container_name: docker-phpmyadmin
+    image: phpmyadmin:latest
+    ports:
+      - "9001:80"
+    environment:
+      MYSQL_DATABASE: "db"
+      PMA_HOST: "mysql"
+      PMA_USER: "root"
+      PMA_PASSWORD: "password"
+    restart: always
+
+  redis:
+    container_name: docker-redis
+    hostname: redis
+    image: redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  redis-commander:
+    container_name: redis-commander
+    hostname: redis-commander
+    image: rediscommander/redis-commander:latest
+    restart: always
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+
+  rabbitmq:
+    container_name: docker-rabbitmq
+    image: rabbitmq:3.8-management
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
